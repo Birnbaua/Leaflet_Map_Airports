@@ -21,28 +21,102 @@ export default class MapTest2 extends React.Component {
         lat: 51.505,
         lng: -0.09,
         zoom: 13,
-        airportsA_R: [],
-        airportsS_Z: []
+        airports: [],
+        delays: []
     }
 
     componentDidMount(){
-        //fetch('https://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org&query=select+distinct+%3Fairport+%3Fname+%3Ficaocode+%3Flat+%3Flong%0D%0A++++++++++++where+%7B%0D%0A++++++++++++%3Fairport+dbo%3AicaoLocationIdentifier+%3Ficaocode.%0D%0A++++++++++++%3Fairport+geo%3Alat+%3Flat.%0D%0A++++++++++++%3Fairport+geo%3Along+%3Flong.%0D%0A++++++++++++%3Fairport+foaf%3Aname+%3Fname.%0D%0A++++++++++++FILTER+regex%28%3Ficaocode%2C+%22%5E....%24%22%29%7D%0D%0A++++++++++++order+by+asc%28%3Ficaocode%29+LIMIT+100&format=application%2Fsparql-results%2Bjson&CXML_redir_for_subjs=121&CXML_redir_for_hrefs=&timeout=30000&debug=on&run=+Run+Query+')
-        fetch('https://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org&query=select+distinct+%3Fairport+%3Ficaocode+%3Fname+%3Flat+%3Flong%0D%0A++++++++++++where+%7B%0D%0A+++++++++++++++%3Fairport+dbo%3AicaoLocationIdentifier+%3Ficaocode.%0D%0A+++++++++++++++%3Fairport+geo%3Alat+%3Flat.%0D%0A+++++++++++++++%3Fairport+geo%3Along+%3Flong.%0D%0A+++++++++++++++%3Fairport+foaf%3Aname+%3Fname.%0D%0A+++++++++++++++FILTER+regex%28%3Ficaocode%2C+%22%5E....%24%22%29.%0D%0A+++++++++++++++FILTER+regex%28%3Ficaocode%2C+%22%5E%5BA-R%5D%22%29+%0D%0A++++++++++++%7D%0D%0A++++++++++++order+by+asc%28%3Ficaocode%29&format=application%2Fsparql-results%2Bjson&CXML_redir_for_subjs=121&CXML_redir_for_hrefs=&timeout=90000&debug=on&run=+Run+Query+')
-        .then(response => response.json())
-        .then((data) => {this.setState({
-            airportsA_R: data.results.bindings,
+        var query1 = `&query=Select distinct ?icao ?name ?lat ?long
+        Where {
+            ?airport dbo:icaoLocationIdentifier ?icao.
+            ?airport geo:lat ?lat.
+            ?airport geo:long ?long.
+            ?airport foaf:name ?name.
+            FILTER regex(?icao, "^....$").
+            FILTER regex(?icao, "^[A-R]") 
+        }
+        order by asc(?icao)`;
+    
+        var query2 = `&query=Select distinct ?icao ?name ?lat ?long
+        Where {
+            ?airport dbo:icaoLocationIdentifier ?icao.
+            ?airport geo:lat ?lat.
+            ?airport geo:long ?long.
+            ?airport foaf:name ?name.
+            FILTER regex(?icao, "^....$").
+            FILTER regex(?icao, "^[S-Z]") 
+        }
+        order by asc(?icao)`;
+
+        var departureDelay = `Prefix cont: <http://www.jku.at/dke/semcon/departuredelays#> 
+        Select distinct ?origin (AVG( minutes(?depDelay)) AS ?delay)
+        Where {
+            ?flight cont:hasOrigin ?origin.
+            ?flight cont:hasDepartureDelay ?depDelay
+        }
+        Group By ?origin 
+        Order By desc(?delay)`
+    
+        fetch("http://localhost:8080/sparql?query=" + encodeURIComponent(departureDelay))
+        .then(res => res.json())
+         .then(results => 
+            results.results.bindings.map(x => {
+              return {
+                icao: x.origin.value.split("/").slice(-1)[0],
+                delay: x.delay.value.split("/").slice(-1)[0]
+              };
             })
-        });
-        fetch('https://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org&query=select+distinct+%3Fairport+%3Ficaocode+%3Fname+%3Flat+%3Flong%0D%0A++++++++++++where+%7B%0D%0A+++++++++++++++%3Fairport+dbo%3AicaoLocationIdentifier+%3Ficaocode.%0D%0A+++++++++++++++%3Fairport+geo%3Alat+%3Flat.%0D%0A+++++++++++++++%3Fairport+geo%3Along+%3Flong.%0D%0A+++++++++++++++%3Fairport+foaf%3Aname+%3Fname.%0D%0A+++++++++++++++FILTER+regex%28%3Ficaocode%2C+%22%5E....%24%22%29.%0D%0A+++++++++++++++FILTER+regex%28%3Ficaocode%2C+%22%5E%5BS-Z%5D%22%29+%0D%0A++++++++++++%7D%0D%0A++++++++++++order+by+asc%28%3Ficaocode%29&format=application%2Fsparql-results%2Bjson&CXML_redir_for_subjs=121&CXML_redir_for_hrefs=&timeout=90000&debug=on&run=+Run+Query+')
-        .then(response => response.json())
-        .then((data) => {this.setState({
-            airportsS_Z: data.results.bindings,
+         )
+          .then(results => {
+            this.setState({ delays: results });
+          });
+
+        var format = "&format=application/json";
+    
+        const urls = [
+          "http://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org" +
+            encodeURI(query1) +
+            encodeURI(format),
+          "http://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org" +
+            encodeURI(query2) +
+            encodeURI(format)
+        ];
+
+        Promise.all(
+          urls.map(url =>
+            fetch(url)
+              .then(res => res.json())
+              .then(res => res.results.bindings)
+          )
+        )
+          .then(results => {
+            return [].concat(...results);
+          })
+          .then(results =>
+            results.map(x => {
+              return {
+                icao: x.icao.value.split("/").slice(-1)[0],
+                lat: x.lat.value.split("/").slice(-1)[0],
+                long: x.long.value.split("/").slice(-1)[0],
+                name: x.name.value.split("/").slice(-1)[0]
+              };
             })
-        });
+          )
+          .then(results => {
+            this.setState({ airports: results });
+          });
     };
 
     render(){
        const position = [this.state.lat, this.state.lng];
+       var airportMap = {};
+        if (Array.isArray(this.state.airports)) {
+        this.state.airports.forEach(x => {
+            var content = {"lat": x.lat,"long": x.long, "name": x.name};
+            airportMap[x.icao] = content;
+        });
+        console.log(airportMap);
+        }
        return (
         <Map className="map" center={position} zoom={this.state.zoom}>
         <TileLayer
@@ -50,22 +124,16 @@ export default class MapTest2 extends React.Component {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {this.state.airportsA_R.map(a => 
-            (<Marker position={[a.lat.value,a.long.value]} icon={myIcon}>
+        {airportMap != null ? this.state.delays.map(airportDelay =>  
+            (airportMap[airportDelay.icao] != null && airportMap[airportDelay.icao].lat != null && airportMap[airportDelay.icao].long != null && airportMap[airportDelay.icao].name != null) ? 
+            (<Marker position={[airportMap[airportDelay.icao].lat,airportMap[airportDelay.icao].long]} icon={myIcon}>
                 <Popup>
-                   Airport: {a.name.value} <br /> Average Departure Delay:
+                   Airport: {airportMap[airportDelay.icao].name} with ICAO Code: {airportMap[airportDelay.icao].icao} <br /> Average Departure Delay: 
+                   {airportDelay.delay}
                 </Popup>
-            </Marker>)
-        )}
-
-        {this.state.airportsS_Z.map(a => 
-            (<Marker position={[a.lat.value,a.long.value]} icon={myIcon}>
-                <Popup>
-                   Airport: {a.name.value} <br /> Average Departure Delay:
-                </Popup>
-            </Marker>)
-        )}
-
+            </Marker>) : ""
+        ) : ""}
+        
 
       </Map>
        );
