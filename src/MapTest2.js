@@ -128,7 +128,7 @@ export default class MapTest2 extends React.Component {
             (airportMap[airportDelay.icao] != null && airportMap[airportDelay.icao].lat != null && airportMap[airportDelay.icao].long != null && airportMap[airportDelay.icao].name != null) ? 
             (<Marker position={[airportMap[airportDelay.icao].lat,airportMap[airportDelay.icao].long]} icon={myIcon}>
                 <Popup>
-                   Airport: {airportMap[airportDelay.icao].name} with ICAO Code: {airportMap[airportDelay.icao].icao} <br /> Average Departure Delay: 
+                   Airport: {airportMap[airportDelay.icao].name} with ICAO Code: {airportDelay.icao} <br /> Average Departure Delay: 
                    {airportDelay.delay}
                 </Popup>
             </Marker>) : ""
