@@ -3,11 +3,11 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import MapTest from './MapTest';
-import MapTest2 from './MapTest2';
+import AverageDepartureDelay from './AverageDepartureDelay';
 import * as serviceWorker from './serviceWorker';
 import 'leaflet/dist/leaflet.css';
 
-ReactDOM.render(<MapTest2 />, document.getElementById('root'));
+ReactDOM.render(<AverageDepartureDelay />, document.getElementById('root'));
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.

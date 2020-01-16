@@ -3,7 +3,7 @@ import L from 'leaflet';
 //import 'leaflet/dist/leaflet.css';
 
 import './App.css';
-import styled from 'styled-components';
+//import styled from 'styled-components';
 import {Map, TileLayer, Marker, Popup} from 'react-leaflet';
 
 
@@ -15,7 +15,7 @@ var myIcon = L.icon({
 });
 
 
-export default class MapTest2 extends React.Component {
+export default class AverageDepartureDelay extends React.Component {
 
     state = {
         lat: 51.505,
